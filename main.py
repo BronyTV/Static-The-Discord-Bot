@@ -2,7 +2,6 @@ from config import config
 import discord
 import asyncio
 import aiohttp
-import re
 import datetime
 import random
 
