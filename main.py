@@ -78,6 +78,14 @@ class Command():
 
         await client.pin_message(msg)
 
+    async def pick(message):
+        if message.content.find(' or ') != -1:
+            options=message.content[6:].split(' or ')
+            choice=random.randint(0, len(options) - 1)
+            await client.send_message(message.channel, 'Ummm..... I\'ll go with **' + options[choice] + '**.')
+        else:
+            await client.send_message(message.channel, "or...?")
+
 class Tumblr(object):
     @classmethod
     async def create(cls):
