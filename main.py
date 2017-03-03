@@ -110,6 +110,9 @@ class Command():
         await client.send_message(message.channel, "{}, you now have access to the spoiler channel!".format(message.author.mention))
 
     async def reqmember(message):
+        if await CheckUser.is_member(message.author):
+            await client.send_message(message.channel, "Hey {}! You are already a member!".format(message.author.mention))
+            return
         member = message.author
         if member.avatar_url != "":
             avatar = member.avatar_url
@@ -126,7 +129,7 @@ class Command():
 
         staff_channel = discord.utils.get(message.server.channels, id=config["STAFF_CHANNEL"])
         msg = await client.send_message(staff_channel, embed=embed)
-        await client.send_message(message.channel, "Your request has been sent! Please wait for the staff's decision on your member request!")
+        await client.send_message(message.channel, "{}, your request has been sent! Please wait for the staff's decision on your member request!".format(message.author.mention))
 
         await client.add_reaction(msg, "👍")
         await client.add_reaction(msg, "👎")
