@@ -179,6 +179,57 @@ class Command():
         else:
             await client.send_message(message.channel, "or...?")
 
+    async def pony(message):
+        await client.send_message(message.channel, "Pony!")
+
+    async def changeling(message):
+        ama = client.get_user_info("81238021453647872")
+        await client.send_message(message.channel, "{} is best admin =P".format(ama.mention))
+
+    async def tech(message):
+        ama = client.get_user_info("81238021453647872")
+        await client.send_message(message.channel, "{} is your tech god. FEAR HIM.".format(ama.mention))
+
+    async def bumble(message):
+        await client.send_message(message.channel, "Current Time is Pants-O-Clock")
+
+    async def colgate(message):
+        await client.send_message(message.channel, "{} is a little dirty. Brushie Brushie Brushie! (with Colgate brand toothpaste)".format(message.author.mention))
+
+    async def fluttershy(message):
+        await client.send_message(message.channel, "Bouncing baby bunies burning brightly")
+
+    async def rainbowdash(message):
+        await client.send_message(message.channel, "No! Don\'t panic! There\'s cookies and punch by the door!")
+
+    async def brushie(message):
+        await client.send_message(message.channel, "{} is a little dirty. Brushie Brushie Brushie!".format(message.author.mention))
+
+    async def roulette(message):
+        await client.send_message(message.author, "Looks like someone tried playing Russian Roulette with a shotgun...")
+        await client.send_message(message.channel, "{} is playing Russian Roulette with a shotgun...".format(message.author.mention))
+        await client.kick(message.author)
+
+    async def konami(message):
+        await client.send_message(message.channel, "Up Up Down Down Left Right Left Right B A")
+
+    async def burn(message):
+        await client.send_message(message.channel, "Here, you might need this. http://www.magidglove.com/Water-Jel-Burn-Jel-Burn-Treatment-Gel-049050pp.aspx")
+
+    async def violate(message):
+        if await CheckUser.is_admin(message.author):
+            rndint=random.randint(1,4)
+            vmsg = ""
+            if rndint==1:
+                vmsg='Your mane looks like a mess. Want me to brushie you all night long?'
+            if rndint==2:
+                vmsg='Hey cutie, can I mark you all night?'
+            if rndint==3:
+                vmsg='Oh, I\'m sorry. I thought that was a braille Cutie Mark.'
+            if rndint==4:
+                vmsg='My name\'th Twi\'tht. Do you want to th\'ee th\'omething th\'well?'
+            await client.send_message(message.channel, "*slides up besides {} and says **{}***".format(message.author.mention, vmsg))
+
 class Tumblr(object):
     @classmethod
     async def create(cls):
