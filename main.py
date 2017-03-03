@@ -29,7 +29,7 @@ async def on_ready():
     print('------')
 
 class CheckUser():
-    async def valid_admin(user): # check if user is admin
+    async def is_admin(user): # check if user is admin
         roles = []
         for role in user.roles:
             roles.append(role.id)
@@ -93,6 +93,21 @@ class Command():
         channel = message.channel
         await client.delete_message(message)
         await Spoiler.send_spoiler_gif(content, msg, channel)
+
+    async def setspoiler(message):
+        if await CheckUser.is_admin(message.author):
+            spoiled_message = await client.get_message(message.channel, message.content[12:])
+            msg = "{} has marked {}'s message as a spoiler~".format(message.author.mention, spoiled_message.author.mention)
+            channel = message.channel
+            spoiled_content = spoiled_message.content
+            await client.delete_message(message)
+            await client.delete_message(spoiled_message)
+            await Spoiler.send_spoiler_gif(spoiled_content, msg, channel)
+
+    async def reqspoiler(message):
+        role = discord.utils.get(message.server.roles, id=config["SPOILER_ROLE"])
+        await client.add_roles(message.author, role)
+        await client.send_message(message.channel, "{}, you now have access to the spoiler channel!".format(message.author.mention))
 
     async def reqmember(message):
         member = message.author
@@ -310,7 +325,7 @@ async def on_message(message):
 
 @client.event
 async def on_reaction_add(reaction, user):
-    if await MemberPromotion.is_valid_message(reaction.message) and await CheckUser.valid_admin(user):
+    if await MemberPromotion.is_valid_message(reaction.message) and await CheckUser.is_admin(user):
         await MemberPromotion.run_promotion(reaction, user)
 
 async def tumblr_background_loop():
