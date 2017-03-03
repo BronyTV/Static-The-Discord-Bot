@@ -94,7 +94,7 @@ class Command():
         await client.delete_message(message)
         await Spoiler.send_spoiler_gif(content, msg, channel)
 
-    async def setspoiler(message):
+    async def markspoiler(message):
         if await CheckUser.is_admin(message.author):
             spoiled_message = await client.get_message(message.channel, message.content[12:])
             msg = "{} has marked {}'s message as a spoiler~".format(message.author.mention, spoiled_message.author.mention)
