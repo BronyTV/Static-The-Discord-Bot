@@ -4,6 +4,16 @@ import asyncio
 import aiohttp
 import datetime
 import random
+import PIL
+from PIL import ImageFont
+from PIL import Image
+from PIL import ImageDraw
+import textwrap
+import os
+import uuid
+from wand.image import Image as WandImage
+
+dir_path = os.path.dirname(os.path.realpath(__file__)) # File folder path to this script
 
 client = discord.Client()
 
@@ -18,7 +28,87 @@ async def on_ready():
         print(serv.name)
     print('------')
 
+class CheckUser():
+    async def is_admin(user): # check if user is admin
+        roles = []
+        for role in user.roles:
+            roles.append(role.id)
+        if config["ADMIN_ROLE"] in roles:
+            return True
+        return False
+
+    async def is_member(user):
+        roles = []
+        for role in user.roles:
+            roles.append(role.id)
+        if config["MEMBER_ROLE"] in roles:
+            return True
+        return False
+
+class Spoiler():
+    async def send_spoiler_gif(text, content, channel): # send_spoiler_gif(spoiled msg, bot msg, send to channel)
+        wrapped = textwrap.wrap(text, 55)
+        font = ImageFont.truetype(dir_path + "/aileron_font/Aileron-SemiBold.otf", 13)
+
+        img_cover = Image.new("RGBA", (400, (20 * len(wrapped)) + 20), (64, 64, 64))
+        draw_cover = ImageDraw.Draw(img_cover)
+        draw_cover.text((10, 10), "( Hover to reveal spoiler )", (160, 160, 160), font=font)
+
+        img_spoiler = Image.new("RGBA", (400, (20 * len(wrapped)) + 20), (64, 64, 64))
+        draw_spoiler = ImageDraw.Draw(img_spoiler)
+        for i, line in enumerate(wrapped):
+            draw_spoiler.text((10, (20 * i) + 10), line, (160, 160, 160), font=font)
+
+        unique = str(uuid.uuid4()) #should be unique enough...
+        file_cover = "gif_tmp/img_cover_{}.png".format(unique)
+        file_spoiler = "gif_tmp/img_spoiler_{}.png".format(unique)
+        file_gif = "gif_tmp/{}.gif".format(unique)
+
+        img_cover.save(file_cover)
+        img_spoiler.save(file_spoiler)
+
+        with WandImage() as wand:
+            with WandImage(filename=file_cover) as cover:
+                wand.sequence.append(cover)
+            with WandImage(filename=file_spoiler) as spoiler:
+                wand.sequence.append(spoiler)
+            for cursor in range(2):
+                with wand.sequence[cursor] as frame:
+                    frame.delay = cursor * 9999999999999999999999999999999999999999999999999999 # setting a really long delay i guess?
+            wand.type = 'optimize'
+            wand.save(filename=file_gif)
+
+        os.remove(file_cover)
+        os.remove(file_spoiler)
+
+        with open(file_gif, 'rb') as gif:
+            await client.send_file(channel, gif, filename="spoiler.gif", content=content)
+
+        os.remove(file_gif)
+
 class Command():
+    async def spoiler(message):
+        content = message.content[8:]
+        msg = "{} has sent a spoiler~".format(message.author.mention)
+        channel = message.channel
+        await client.delete_message(message)
+        await Spoiler.send_spoiler_gif(content, msg, channel)
+
+    async def markspoiler(message):
+        if await CheckUser.is_admin(message.author):
+            spoiled_message = await client.get_message(message.channel, message.content[12:])
+            msg = "{} has marked {}'s message as a spoiler~".format(message.author.mention, spoiled_message.author.mention)
+            channel = message.channel
+            spoiled_content = spoiled_message.content
+            await client.delete_message(message)
+            await client.delete_message(spoiled_message)
+            await Spoiler.send_spoiler_gif(spoiled_content, msg, channel)
+
+    async def reqspoiler(message):
+        role = discord.utils.get(message.server.roles, id=config["SPOILER_ROLE"])
+        await client.add_roles(message.author, role)
+        await client.send_message(message.channel, "{}, you now have access to the spoiler channel!".format(message.author.mention))
+
     async def reqmember(message):
         member = message.author
         if member.avatar_url != "":
@@ -46,7 +136,7 @@ class Command():
         await client.pin_message(msg)
 
     async def sponsormember(message):
-        if not await MemberPromotion.is_member(message.author):
+        if not await CheckUser.is_member(message.author):
             await client.send_message(message.channel, "You are not a member yet! You cannot sponsor a member without having the member role. Why don't you request a membership status with `!reqmember`?")
             return
         if len(message.mentions) == 0:
@@ -203,22 +293,6 @@ class MemberPromotion():
                     return True
         return False
 
-    async def valid_admin(user): # check if user is admin
-        roles = []
-        for role in user.roles:
-            roles.append(role.id)
-        if config["ADMIN_ROLE"] in roles:
-            return True
-        return False
-
-    async def is_member(user):
-        roles = []
-        for role in user.roles:
-            roles.append(role.id)
-        if config["MEMBER_ROLE"] in roles:
-            return True
-        return False
-
     async def run_promotion(reaction, user): # promote user depending on the reaction of admin
         if reaction.emoji == "👌" or reaction.emoji == "👇":
             member_id = reaction.message.embeds[0]["footer"]["text"][9:]
@@ -251,7 +325,7 @@ async def on_message(message):
 
 @client.event
 async def on_reaction_add(reaction, user):
-    if await MemberPromotion.is_valid_message(reaction.message) and await MemberPromotion.valid_admin(user):
+    if await MemberPromotion.is_valid_message(reaction.message) and await CheckUser.is_admin(user):
         await MemberPromotion.run_promotion(reaction, user)
 
 async def tumblr_background_loop():
