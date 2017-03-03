@@ -12,6 +12,9 @@ config = {
     # The id of the admin role
     "ADMIN_ROLE": "226258329147752448",
 
+    # The id of the spoiler role.
+    "SPOILER_ROLE": "253488094523234090",
+
     # The id of the member role
     "MEMBER_ROLE": "271774377258287104",
 
