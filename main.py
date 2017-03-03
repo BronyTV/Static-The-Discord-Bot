@@ -140,10 +140,10 @@ class Command():
 
     async def sponsormember(message):
         if not await CheckUser.is_member(message.author):
-            await client.send_message(message.channel, "You are not a member yet! You cannot sponsor a member without having the member role. Why don't you request a membership status with `!reqmember`?")
+            await client.send_message(message.channel, "Hey {}, you are not a member yet! You cannot sponsor a member without having the member role. Why don't you request a membership status with `!reqmember`?".format(message.author.mention))
             return
         if len(message.mentions) == 0:
-            await client.send_message(message.channel, "Please mention a user to sponsor membership.")
+            await client.send_message(message.channel, "{} - Please mention a user to sponsor membership.".format(message.author.mention))
             return
         sponsormember = message.author
         member = message.mentions[0]
@@ -175,7 +175,7 @@ class Command():
         if message.content.find(' or ') != -1:
             options=message.content[6:].split(' or ')
             choice=random.randint(0, len(options) - 1)
-            await client.send_message(message.channel, 'Ummm..... I\'ll go with **' + options[choice] + '**.')
+            await client.send_message(message.channel, '{} Ummm..... I\'ll go with **'.format(message.author.mention) + options[choice] + '**.')
         else:
             await client.send_message(message.channel, "or...?")
 
