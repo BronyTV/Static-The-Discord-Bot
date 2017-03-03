@@ -230,6 +230,9 @@ class Command():
                 vmsg='My name\'th Twi\'tht. Do you want to th\'ee th\'omething th\'well?'
             await client.send_message(message.channel, "*slides up besides {} and says **{}***".format(message.author.mention, vmsg))
 
+    async def ping(message):
+        await client.send_message(message.channel, "{} Pong! :D".format(message.author.mention))
+
 class Tumblr(object):
     @classmethod
     async def create(cls):
