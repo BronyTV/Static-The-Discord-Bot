@@ -1,0 +1,24 @@
+thon,Mare-a-thon
+new,New Episode
+sp,Special Event
+dj,DJ
+fic,Fisher's Bay
+game,Gaming
+riff,Riff Night
+social,Social Night
+tad,Twitchy After Dark
+test,System Test
+rpony,Random Pony
+r,Random
+art,Art
+bb,Boiler Barn
+ep,Pony Episodes
+nhb,No Hooves Barred
+anime,Anime
+otakesuka,Otakesuka
+abg,All Bit Gaming
+ter,True Equestria Radio
+os,Off Scripted
+tcd,Animating with EndenDragon
+nt,Nerds Talkin'
+mlppu,MLP: Project Unknown

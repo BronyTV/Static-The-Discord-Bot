@@ -12,10 +12,13 @@ import textwrap
 import os
 import uuid
 from wand.image import Image as WandImage
+import csv
+import json
 
 dir_path = os.path.dirname(os.path.realpath(__file__)) # File folder path to this script
 
 client = discord.Client()
+streaming_instance = None
 
 @client.event
 async def on_ready():
@@ -29,19 +32,28 @@ async def on_ready():
     print('------')
 
 class CheckUser():
-    async def is_admin(user): # check if user is admin
+    def get_roles(user):
         roles = []
-        for role in user.roles:
+        member = client.get_server(config['GUILD_ID']).get_member(user.id)
+        for role in member.roles:
             roles.append(role.id)
+        return roles
+
+    async def is_admin(user): # check if user is admin
+        roles = CheckUser.get_roles(user)
         if config["ADMIN_ROLE"] in roles:
             return True
         return False
 
     async def is_member(user):
-        roles = []
-        for role in user.roles:
-            roles.append(role.id)
+        roles = CheckUser.get_roles(user)
         if config["MEMBER_ROLE"] in roles:
+            return True
+        return False
+
+    async def is_streamer(user):
+        roles = CheckUser.get_roles(user)
+        if config["STREAMER_ROLE"] in roles:
             return True
         return False
 
@@ -85,6 +97,52 @@ class Spoiler():
             await client.send_file(channel, gif, filename="spoiler.gif", content=content)
 
         os.remove(file_gif)
+
+class Streaming():
+    @classmethod
+    async def create(cls):
+        self = cls()
+        self.game = None
+        self.streamer = None
+        self.title = ""
+        self.twitch_url = "https://www.twitch.tv/twitch"
+        return self
+
+    def getStreamCodes():
+        streams = {}
+        with open('streamcode.txt') as codefile:
+            streamfile = csv.reader(codefile, delimiter=',')
+            for line in streamfile:
+                streams[line[0]] = line[1]
+        return streams
+
+    async def send_to_btv_site(showname, streamer):
+        tumblr_url = "https://bronytv.net/api/now_streaming?api_key={}".format(config["BRONYTV_API_KEY"])
+        if showname is None or streamer is None:
+            payload = {'now_streaming': None}
+        else:
+            payload = {'now_streaming': "{} - {}".format(streamer, showname)}
+        headers = {"Content-Type": "application/json"}
+        async with aiohttp.ClientSession() as session:
+            async with session.post(tumblr_url, data=json.dumps(payload), headers=headers):
+                pass
+
+    async def initiate(self, streamcode, streamer):
+        codes = Streaming.getStreamCodes()
+        if streamcode in codes:
+            title = codes[streamcode]
+            self.game = discord.Game(name="{} - {}".format(title, streamer.name), url=self.twitch_url, type=1)
+            self.streamer = streamer
+            self.title = title
+            await client.change_presence(game=self.game)
+            await client.send_message(client.get_channel(config['MANE_CHANNEL']), "@here\n{} is now streaming **__{}__** on http://bronytv.net/stream !".format(self.streamer.mention, self.title))
+        else:
+            self.game = None
+            self.streamer = None
+            self.title = ""
+            await client.change_presence()
+            await client.send_message(client.get_channel(config['MANE_CHANNEL']), "Stream is now off.")
+        await Streaming.send_to_btv_site(self.title, getattr(self.streamer, 'name', None))
 
 class Command():
     async def spoiler(message):
@@ -170,6 +228,28 @@ class Command():
         await client.add_reaction(msg, "👇")
 
         await client.pin_message(msg)
+
+    async def stream(message):
+        msg = message.content
+        if await CheckUser.is_streamer(message.author):
+            game = ""
+            if len(msg.split()) > 1:
+                game = msg.split()[1]
+            global streaming_instance
+            await streaming_instance.initiate(game, message.author)
+        else:
+            await client.send_message(message.channel, "Sorry {}, you do not have the streamer role.".format(message.author.mention))
+
+    async def stlist(message):
+        if await CheckUser.is_streamer(message.author):
+            global streaming_instance
+            codes = Streaming.getStreamCodes()
+            embed = discord.Embed(title="Stream Code List", colour=discord.Colour(0x807bbe), description="List of stream codes. Type `!stream <code>` to start streaming!")
+            for code, showname in codes.items():
+                embed.add_field(name=code, value=showname)
+            await client.send_message(message.channel, message.author.mention, embed=embed)
+        else:
+            await client.send_message(message.channel, "Sorry {}, you do not have the streamer role.".format(message.author.mention))
 
     async def pick(message):
         if message.content.find(' or ') != -1:
@@ -392,5 +472,11 @@ async def tumblr_background_loop():
         await tumblr.new_post_task()
         await asyncio.sleep(120)
 
+async def init_streaming():
+    await client.wait_until_ready()
+    global streaming_instance
+    streaming_instance = await Streaming().create()
+
 client.loop.create_task(tumblr_background_loop())
+client.loop.create_task(init_streaming())
 client.run(config['DISCORD_BOT_TOKEN'])
