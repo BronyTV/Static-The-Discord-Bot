@@ -479,3 +479,6 @@ async def init_streaming():
 
 client.loop.create_task(tumblr_background_loop())
 client.loop.create_task(init_streaming())
+
+if __name__ == "__main__":
+    client.run(config['DISCORD_BOT_TOKEN'])
