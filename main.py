@@ -448,6 +448,21 @@ class MemberPromotion():
                 await client.send_message(reaction.message.channel, "Member role has been declined for {}#{} by {}".format(member.name, member.discriminator, user.name))
             await client.unpin_message(reaction.message)
 
+    async def run_threshold_promotion(reaction): # promotes user if message meets criterias
+        reactions = reaction.message.reactions
+        reactions_parsed = {"👍": 0, "👎": 0, "👌": 0, "👇": 0}
+        for react in reactions:
+            if react.emoji in reactions_parsed:
+                reactions_parsed[react.emoji] = react.count - 1
+        if (reactions_parsed["👌"] == 0 and reactions_parsed["👇"] == 0 and reactions_parsed["👎"] == 0 and reactions_parsed["👍"] >= 4): # if only yes (4) and nothin else
+            member_id = reaction.message.embeds[0]["footer"]["text"][9:]
+            member = discord.utils.get(reaction.message.server.members, id=member_id)
+            role = discord.utils.get(reaction.message.server.roles, id=config["MEMBER_ROLE"])
+            if not await CheckUser.is_member(member):
+                #promote to member
+                await client.add_roles(member, role)
+                await client.send_message(reaction.message.channel, "Member role has been approved for {}#{} automatically from a unison vote of 4 or more 👍s.".format(member.name, member.discriminator))
+                await client.send_message(member, "*Pssst* I've heard from the staffs over at BronyTV that you've been given the member role!")
 
 @client.event
 async def on_message(message):
@@ -472,8 +487,10 @@ async def on_message(message):
 
 @client.event
 async def on_reaction_add(reaction, user):
-    if await MemberPromotion.is_valid_message(reaction.message) and await CheckUser.is_admin(user):
-        await MemberPromotion.run_promotion(reaction, user)
+    if await MemberPromotion.is_valid_message(reaction.message):
+        if await CheckUser.is_admin(user):
+            await MemberPromotion.run_promotion(reaction, user)
+        await MemberPromotion.run_threshold_promotion(reaction)
 
 async def tumblr_background_loop():
     await client.wait_until_ready()
