@@ -440,6 +440,7 @@ class MemberPromotion():
                 #promote to member
                 await client.add_roles(member, role)
                 await client.send_message(reaction.message.channel, "Member role has been approved for {}#{} by {}.".format(member.name, member.discriminator, user.name))
+                await client.send_message(member, "*Pssst* I've heard from the staffs over at BronyTV that you've been given the member role!")
 
             if reaction.emoji == "👇":
                 #demote member
