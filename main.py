@@ -460,6 +460,15 @@ async def on_message(message):
             if cmd: # if cmd is not none...
                 await client.send_typing(message.channel) #this looks nice
                 await getattr(Command, msg_cmd)(message) #actually run cmd, passing in msg obj
+    if "derpicdn.net/img/" in message.content:
+        for url in message.content.split():
+            if "derpicdn.net/img" in url:
+                payload = {"fizziness": 0.3, "scraper_url": url}
+                async with aiohttp.ClientSession() as session:
+                    async with session.post("https://derpibooru.org/search/reverse.json", data=payload) as resp:
+                        content = await resp.json()
+                        img = content["search"][0]
+                        await client.send_message(message.channel, "Here's {}'s direct linked image on Derpibooru!\n{}".format(message.author.mention, "https://derpibooru.org/"+img["id"]))
 
 @client.event
 async def on_reaction_add(reaction, user):
