@@ -430,7 +430,7 @@ class MemberPromotion():
                     return True
         return False
 
-    async def run_promotion(reaction, user): # promote user depending on the reaction of admin
+    async def run_admin_promotion(reaction, user): # promote user depending on the reaction of admin
         if reaction.emoji == "👌" or reaction.emoji == "👇":
             member_id = reaction.message.embeds[0]["footer"]["text"][9:]
             member = discord.utils.get(reaction.message.server.members, id=member_id)
@@ -463,6 +463,7 @@ class MemberPromotion():
                 await client.add_roles(member, role)
                 await client.send_message(reaction.message.channel, "Member role has been approved for {}#{} automatically from a unison vote of 4 or more 👍s.".format(member.name, member.discriminator))
                 await client.send_message(member, "*Pssst* I've heard from the staffs over at BronyTV that you've been given the member role!")
+                await client.unpin_message(reaction.message)
 
 @client.event
 async def on_message(message):
@@ -489,7 +490,7 @@ async def on_message(message):
 async def on_reaction_add(reaction, user):
     if await MemberPromotion.is_valid_message(reaction.message):
         if await CheckUser.is_admin(user):
-            await MemberPromotion.run_promotion(reaction, user)
+            await MemberPromotion.run_admin_promotion(reaction, user)
         await MemberPromotion.run_threshold_promotion(reaction)
 
 async def tumblr_background_loop():
