@@ -162,6 +162,17 @@ class Command():
             await client.delete_message(spoiled_message)
             await Spoiler.send_spoiler_gif(spoiled_content, msg, channel)
 
+    async def reversederpibooru(message):
+        if "derpicdn.net/img" in message.content:
+            payload = {"fizziness": 0.3, "scraper_url": message.content.split()[1]}
+            async with aiohttp.ClientSession() as session:
+                async with session.post("https://derpibooru.org/search/reverse.json", data=payload) as resp:
+                    content = await resp.json()
+                    img = content["search"][0]
+                    await client.send_message(message.author, "Here's your direct linked image on Derpibooru!\n{}".format("https://derpibooru.org/"+img["id"]))
+        else:
+            await client.send_message(message.channel, "{}, I'm sorry, this is not a valid Derpibooru CDN media link.".format(message.author.mention))
+
     async def reqspoiler(message):
         role = discord.utils.get(message.server.roles, id=config["SPOILER_ROLE"])
         await client.add_roles(message.author, role)
@@ -476,15 +487,6 @@ async def on_message(message):
             if cmd: # if cmd is not none...
                 await client.send_typing(message.channel) #this looks nice
                 await getattr(Command, msg_cmd)(message) #actually run cmd, passing in msg obj
-    if "derpicdn.net/img/" in message.content:
-        for url in message.content.split():
-            if "derpicdn.net/img" in url:
-                payload = {"fizziness": 0.3, "scraper_url": url}
-                async with aiohttp.ClientSession() as session:
-                    async with session.post("https://derpibooru.org/search/reverse.json", data=payload) as resp:
-                        content = await resp.json()
-                        img = content["search"][0]
-                        await client.send_message(message.channel, "Here's {}'s direct linked image on Derpibooru!\n{}".format(message.author.mention, "https://derpibooru.org/"+img["id"]))
 
 @client.event
 async def on_reaction_add(reaction, user):
