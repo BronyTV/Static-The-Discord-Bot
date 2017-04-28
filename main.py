@@ -14,10 +14,14 @@ import uuid
 from wand.image import Image as WandImage
 import csv
 import json
+import logging
 
 dir_path = os.path.dirname(os.path.realpath(__file__)) # File folder path to this script
 
 client = discord.Client()
+logging.basicConfig(filename='staticbot.log',level=logging.INFO,format='%(asctime)s %(message)s', datefmt='%m/%d/%Y %I:%M:%S %p')
+logger = logging.getLogger('StaticBot')
+
 streaming_instance = None
 
 @client.event
