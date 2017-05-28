@@ -2,3 +2,4 @@ discord.py[voice]
 aiohttp
 Pillow
 Wand
+nltk

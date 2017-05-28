@@ -15,6 +15,7 @@ from wand.image import Image as WandImage
 import csv
 import json
 import logging
+from nltk.chat.eliza import eliza_chatbot
 
 dir_path = os.path.dirname(os.path.realpath(__file__)) # File folder path to this script
 
@@ -491,6 +492,11 @@ async def on_message(message):
             if cmd: # if cmd is not none...
                 await client.send_typing(message.channel) #this looks nice
                 await getattr(Command, msg_cmd)(message) #actually run cmd, passing in msg obj
+        elif msg_cmd == "<@{}>".format(client.user.id): #make sure it is a mention (eliza handler)
+            await client.send_typing(message.channel)
+            user_query = message.content.split(" ", 1)[1]
+            response = eliza_chatbot.respond(user_query)
+            await client.send_message(message.channel, "{}, {}".format(message.author.mention, response))
 
 @client.event
 async def on_reaction_add(reaction, user):
