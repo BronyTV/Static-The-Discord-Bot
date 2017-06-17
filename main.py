@@ -267,6 +267,15 @@ class Command():
         else:
             await client.send_message(message.channel, "Sorry {}, you do not have the streamer role.".format(message.author.mention))
 
+    async def news(message):
+        if await CheckUser.is_streamer(message.author) or await CheckUser.is_admin(message.author):
+            url = "https://bronytv.net/api/raribox?api_key={}".format(config["BRONYTV_API_KEY"])
+            payload = {'text': message.content[6:]}
+            headers = {'Content-Type': 'application/json'}
+            async with aiohttp.ClientSession() as session:
+                async with session.post(url, data=json.dumps(payload), headers=headers):
+                    pass
+            
     async def pick(message):
         if message.content.find(' or ') != -1:
             options=message.content[6:].split(' or ')
