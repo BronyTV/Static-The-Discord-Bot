@@ -278,7 +278,7 @@ class Command():
             possible_url = content.split()[0].lower()
             if possible_url[:8] == "https://" or possible_url[:7] == "http://": #assume url exists
                 payload["image_url"] = possible_url
-                content = message.content.split(None, 1) # Will truncate the url
+                content = content.split(None, 1) # Will truncate the url
                 if len(content) > 1:
                     content = content[1]
                 else:
