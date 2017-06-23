@@ -231,7 +231,7 @@ class Command():
         embed.set_author(name="{}".format(member.name), icon_url="{}".format(avatar))
         embed.set_footer(text="User ID: {}".format(member.id))
 
-        embed.add_field(name="👍/👎", value="Agree/Disagree on {}'s member role.".format(member.name), inline=True)
+        embed.add_field(name="👍/👎", value="Agree/Disagree on {}'s member role.".format(member.name), inline=True)ffffff
         embed.add_field(name="👌/👇", value="**[Admins Only]** Instantly grant/decline member status to {}.".format(member.name), inline=True)
 
         staff_channel = discord.utils.get(message.server.channels, id=config["STAFF_CHANNEL"])
@@ -270,11 +270,27 @@ class Command():
     async def news(message):
         if await CheckUser.is_streamer(message.author) or await CheckUser.is_admin(message.author):
             url = "https://bronytv.net/api/raribox?api_key={}".format(config["BRONYTV_API_KEY"])
-            payload = {'text': message.content[6:]}
+            if len(message.content.split()) < 2:
+                await client.send_message(message.channel, "Hey {}, Please change the rariboard using the following command format:\n`!news <image-url> <message>` (At least one parameter is required).".format(message.author.mention))
+                return
+            content = message.content.split(None, 1)[1] # truncate the command
+            payload = {}
+            possible_url = content.split()[0].lower()
+            if possible_url[:8] == "https://" or possible_url[:7] == "http://": #assume url exists
+                payload["image_url"] = possible_url
+                content = message.content.split(None, 1) # Will truncate the url
+                if len(content) > 1:
+                    content = content[1]
+                else:
+                    content = None
+            if content:
+                payload["text"] = content
             headers = {'Content-Type': 'application/json'}
             async with aiohttp.ClientSession() as session:
                 async with session.post(url, data=json.dumps(payload), headers=headers):
                     pass
+        else:
+            await client.send_message(message.channel, "Sorry {}, you do not have the streamer or admin role.".format(message.author.mention))
             
     async def pick(message):
         if message.content.find(' or ') != -1:
