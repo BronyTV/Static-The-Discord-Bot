@@ -275,20 +275,23 @@ class Command():
                 return
             content = message.content.split(None, 1)[1] # truncate the command
             payload = {}
+            embed = discord.Embed(title="Rariboard", colour=discord.Colour(0x252af), url="http://bronytv.net/stream")
             possible_url = content.split()[0].lower()
             if possible_url[:8] == "https://" or possible_url[:7] == "http://": #assume url exists
                 payload["image_url"] = possible_url
+                embed.set_thumbnail(url=possible_url)
                 content = content.split(None, 1) # Will truncate the url
                 if len(content) > 1:
                     content = content[1]
                 else:
                     content = None
             if content:
+                embed.description = content
                 payload["text"] = content
             headers = {'Content-Type': 'application/json'}
             async with aiohttp.ClientSession() as session:
                 async with session.post(url, data=json.dumps(payload), headers=headers):
-                    pass
+                    await client.send_message(message.channel, "{}, Rariboard updated with the following values changed:".format(message.author.mention), embed=embed)
         else:
             await client.send_message(message.channel, "Sorry {}, you do not have the streamer or admin role.".format(message.author.mention))
             
