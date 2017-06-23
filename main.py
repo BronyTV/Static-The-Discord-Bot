@@ -231,7 +231,7 @@ class Command():
         embed.set_author(name="{}".format(member.name), icon_url="{}".format(avatar))
         embed.set_footer(text="User ID: {}".format(member.id))
 
-        embed.add_field(name="👍/👎", value="Agree/Disagree on {}'s member role.".format(member.name), inline=True)ffffff
+        embed.add_field(name="👍/👎", value="Agree/Disagree on {}'s member role.".format(member.name), inline=True)
         embed.add_field(name="👌/👇", value="**[Admins Only]** Instantly grant/decline member status to {}.".format(member.name), inline=True)
 
         staff_channel = discord.utils.get(message.server.channels, id=config["STAFF_CHANNEL"])
