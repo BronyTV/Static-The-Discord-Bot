@@ -271,7 +271,7 @@ class Command():
         if await CheckUser.is_streamer(message.author) or await CheckUser.is_admin(message.author):
             url = "https://bronytv.net/api/raribox?api_key={}".format(config["BRONYTV_API_KEY"])
             if len(message.content.split()) < 2:
-                await client.send_message(message.channel, "Hey {}, Please change the rariboard using the following command format:\n`!news <image-url> <message>` (At least one parameter is required).".format(message.author.mention))
+                await client.send_message(message.channel, "Hey {}, Please change the rariboard using the following command format:\n`!news <image-url> <message>` (At least one parameter is required); Message parameter of `none` to clear rariboard.".format(message.author.mention))
                 return
             content = message.content.split(None, 1)[1] # truncate the command
             payload = {}
@@ -288,6 +288,8 @@ class Command():
             if content:
                 embed.description = content
                 payload["text"] = content
+                if content.lower() == "none":
+                    payload["text"] = "" # clear out the rariboard
             headers = {'Content-Type': 'application/json'}
             async with aiohttp.ClientSession() as session:
                 async with session.post(url, data=json.dumps(payload), headers=headers):
