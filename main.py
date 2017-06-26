@@ -276,8 +276,8 @@ class Command():
             content = message.content.split(None, 1)[1] # truncate the command
             payload = {}
             embed = discord.Embed(title="Rariboard", colour=discord.Colour(0x252af), url="http://bronytv.net/stream")
-            possible_url = content.split()[0].lower()
-            if possible_url[:8] == "https://" or possible_url[:7] == "http://": #assume url exists
+            possible_url = content.split()[0]
+            if possible_url[:8].lower() == "https://" or possible_url[:7].lower() == "http://": #assume url exists
                 payload["image_url"] = possible_url
                 embed.set_thumbnail(url=possible_url)
                 content = content.split(None, 1) # Will truncate the url
