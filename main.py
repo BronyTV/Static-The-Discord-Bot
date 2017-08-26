@@ -35,6 +35,12 @@ async def on_ready():
     for serv in client.servers:
         print(serv.name)
     print('------')
+    
+    # Cache pinned messages in #staff
+    pins = await client.pins_from(client.get_channel(config["STAFF_CHANNEL"]))
+    msgs = client.connection.messages
+    for p in pins:
+        msgs.append(p)
 
 class CheckUser():
     def get_roles(user):
