@@ -255,10 +255,13 @@ class Command():
         msg = message.content
         if await CheckUser.is_streamer(message.author):
             game = ""
+            streamer = message.author
             if len(msg.split()) > 1:
                 game = msg.split()[1]
+                if len(message.mentions) > 0:
+                    streamer = message.mentions[0]
             global streaming_instance
-            await streaming_instance.initiate(game, message.author)
+            await streaming_instance.initiate(game, streamer)
         else:
             await client.send_message(message.channel, "Sorry {}, you do not have the streamer role.".format(message.author.mention))
 
