@@ -318,11 +318,11 @@ class Command():
         await client.send_message(message.channel, "Pony!")
 
     async def changeling(message):
-        ama = client.get_user_info("81238021453647872")
+        ama = await client.get_user_info("81238021453647872")
         await client.send_message(message.channel, "{} is best admin =P".format(ama.mention))
 
     async def tech(message):
-        ama = client.get_user_info("81238021453647872")
+        ama = await client.get_user_info("81238021453647872")
         await client.send_message(message.channel, "{} is your tech god. FEAR HIM.".format(ama.mention))
 
     async def bumble(message):
