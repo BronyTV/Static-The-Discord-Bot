@@ -188,6 +188,9 @@ class Command():
         role = discord.utils.get(message.server.roles, id=config["SPOILER_ROLE"])
         await client.add_roles(message.author, role)
         await client.send_message(message.channel, "{}, you now have access to the spoiler channel!".format(message.author.mention))
+    
+    async def reqspoilers(message):
+        await Command.reqspoiler(message)
 
     async def reqmember(message):
         if await CheckUser.is_member(message.author):
