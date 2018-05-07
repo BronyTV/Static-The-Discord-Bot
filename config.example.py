@@ -10,7 +10,7 @@ config = {
     "BRONYTV_API_KEY": "dfasjkdfjklasjkldfaskldsajfk",
 
     # The prefix used to distinguish a general message to a command
-    "COMMAND_PREFIX": "!",
+    "COMMAND_PREFIX": ["!", "~"],
 
     # Guild id
     "GUILD_ID": "140252024666062848",

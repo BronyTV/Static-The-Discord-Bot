@@ -528,7 +528,7 @@ async def on_message(message):
     # Command Handler - tm of endendragon
     if len(message.content.split()) > 0: #making sure there is actually stuff in the message
         msg_cmd = message.content.split()[0].lower() # get first word im message
-        if msg_cmd[0] == config["COMMAND_PREFIX"]: # test for cmd prefix
+        if msg_cmd[0] in config["COMMAND_PREFIX"]: # test for cmd prefix
             msg_cmd = msg_cmd[1:] # remove the command prefix
             cmd = getattr(Command, msg_cmd, None) #check if cmd exist, if not its none
             if cmd: # if cmd is not none...
