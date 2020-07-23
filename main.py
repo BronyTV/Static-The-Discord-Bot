@@ -31,21 +31,21 @@ async def on_ready():
     print(client.user.name)
     print(client.user.id)
     print('------')
-    print('Connected servers')
-    for serv in client.servers:
+    print('Connected guilds')
+    for serv in client.guilds:
         print(serv.name)
     print('------')
     
     # Cache pinned messages in #staff
-    pins = await client.pins_from(client.get_channel(config["STAFF_CHANNEL"]))
-    msgs = client.connection.messages
-    for p in pins:
-        msgs.append(p)
+    pins = await client.get_channel(config["STAFF_CHANNEL"]).pins()
+    #msgs = client.connection.messages
+    #for p in pins:
+    #    msgs.append(p)
 
 class CheckUser():
     def get_roles(user):
         roles = []
-        member = client.get_server(config['GUILD_ID']).get_member(user.id)
+        member = client.get_guild(config['GUILD_ID']).get_member(user.id)
         for role in member.roles:
             roles.append(role.id)
         return roles
@@ -105,7 +105,7 @@ class Spoiler():
         os.remove(file_spoiler)
 
         with open(file_gif, 'rb') as gif:
-            await client.send_file(channel, gif, filename="spoiler.gif", content=content)
+            await channel.send(content, file=discord.File(gif, "spoiler.gif"))
 
         os.remove(file_gif)
 
@@ -113,7 +113,7 @@ class Streaming():
     @classmethod
     async def create(cls):
         self = cls()
-        self.game = None
+        self.activity = None
         self.streamer = None
         self.title = ""
         self.twitch_url = "https://www.twitch.tv/twitch"
@@ -142,17 +142,17 @@ class Streaming():
         codes = Streaming.getStreamCodes()
         if streamcode in codes:
             title = codes[streamcode]
-            self.game = discord.Game(name="{} - {}".format(title, streamer.name), url=self.twitch_url, type=1)
+            self.activity = discord.Streaming(name="{} - {}".format(title, streamer.name), url=self.twitch_url)
             self.streamer = streamer
             self.title = title
-            await client.change_presence(game=self.game)
-            await client.send_message(client.get_channel(config['MANE_CHANNEL']), "@here\n{} is now streaming **__{}__** on http://bronytv.net/stream !".format(self.streamer.mention, self.title))
+            await client.change_presence(activity=self.activity)
+            await client.get_channel(config['MANE_CHANNEL']).send("@here\n{} is now streaming **__{}__** on http://bronytv.net/stream !".format(self.streamer.mention, self.title))
         else:
-            self.game = None
+            self.activity = None
             self.streamer = None
             self.title = ""
             await client.change_presence()
-            await client.send_message(client.get_channel(config['MANE_CHANNEL']), "Stream is now off.")
+            await client.get_channel(config['MANE_CHANNEL']).send("Stream is now off.")
         await Streaming.send_to_btv_site(self.title, getattr(self.streamer, 'name', None))
 
 class Command():
@@ -160,17 +160,17 @@ class Command():
         content = message.content[8:]
         msg = "{} has sent a spoiler~".format(message.author.mention)
         channel = message.channel
-        await client.delete_message(message)
+        await message.delete()
         await Spoiler.send_spoiler_gif(content, msg, channel)
 
     async def markspoiler(message):
         if await CheckUser.is_admin(message.author):
-            spoiled_message = await client.get_message(message.channel, message.content[12:])
+            spoiled_message = await message.channel.fetch_message(message.content[12:])
             msg = "{} has marked {}'s message as a spoiler~".format(message.author.mention, spoiled_message.author.mention)
             channel = message.channel
             spoiled_content = spoiled_message.content
-            await client.delete_message(message)
-            await client.delete_message(spoiled_message)
+            await message.delete()
+            await spoiled_message.delete()
             await Spoiler.send_spoiler_gif(spoiled_content, msg, channel)
 
     async def reversederpibooru(message):
@@ -180,21 +180,25 @@ class Command():
                 async with session.post("https://derpibooru.org/search/reverse.json", data=payload) as resp:
                     content = await resp.json()
                     img = content["search"][0]
-                    await client.send_message(message.author, "Here's your direct linked image on Derpibooru!\n{}".format("https://derpibooru.org/"+img["id"]))
+                    await message.author.send("Here's your direct linked image on Derpibooru!\n{}".format("https://derpibooru.org/"+img["id"]))
         else:
-            await client.send_message(message.channel, "{}, I'm sorry, this is not a valid Derpibooru CDN media link.".format(message.author.mention))
+            await message.channel.send("{}, I'm sorry, this is not a valid Derpibooru CDN media link.".format(message.author.mention))
 
     async def reqspoiler(message):
-        role = discord.utils.get(message.server.roles, id=config["SPOILER_ROLE"])
-        await client.add_roles(message.author, role)
-        await client.send_message(message.channel, "{}, you now have access to the spoiler channel!".format(message.author.mention))
-    
+        guild = message.guild or client.get_guild(config['GUILD_ID'])
+        member = message.author
+        role = guild.get_role(config["SPOILER_ROLE"])
+        if not isinstance(member, discord.Member):
+            member = guild.get_member(member.id)
+        await member.add_roles(role)
+        await message.channel.send("{}, you now have access to the spoiler channel!".format(message.author.mention))
+
     async def reqspoilers(message):
         await Command.reqspoiler(message)
 
     async def reqmember(message):
         if await CheckUser.is_member(message.author):
-            await client.send_message(message.channel, "Hey {}! You are already a member!".format(message.author.mention))
+            await message.channel.send("Hey {}! You are already a member!".format(message.author.mention))
             return
         member = message.author
         if member.avatar_url != "":
@@ -210,23 +214,24 @@ class Command():
         embed.add_field(name="👍/👎", value="Agree/Disagree on {}'s member role.".format(member.name), inline=True)
         embed.add_field(name="👌/👇", value="**[Admins Only]** Instantly grant/decline member status to {}.".format(member.name), inline=True)
 
-        staff_channel = discord.utils.get(message.server.channels, id=config["STAFF_CHANNEL"])
-        msg = await client.send_message(staff_channel, embed=embed)
-        await client.send_message(message.channel, "{}, your request has been sent! Please wait for the staff's decision on your member request!".format(message.author.mention))
+        guild = message.guild or client.get_guild(config['GUILD_ID'])
+        staff_channel = guild.get_channel(config["STAFF_CHANNEL"])
+        msg = await staff_channel.send(embed=embed)
+        await message.channel.send("{}, your request has been sent! Please wait for the staff's decision on your member request!".format(message.author.mention))
 
-        await client.add_reaction(msg, "👍")
-        await client.add_reaction(msg, "👎")
-        await client.add_reaction(msg, "👌")
-        await client.add_reaction(msg, "👇")
+        await msg.add_reaction("👍")
+        await msg.add_reaction("👎")
+        await msg.add_reaction("👌")
+        await msg.add_reaction("👇")
 
-        await client.pin_message(msg)
+        await msg.pin()
 
     async def sponsormember(message):
         if not await CheckUser.is_member(message.author):
-            await client.send_message(message.channel, "Hey {}, you are not a member yet! You cannot sponsor a member without having the member role. Why don't you request a membership status with `!reqmember`?".format(message.author.mention))
+            await message.channel.send("Hey {}, you are not a member yet! You cannot sponsor a member without having the member role. Why don't you request a membership status with `!reqmember`?".format(message.author.mention))
             return
         if len(message.mentions) == 0:
-            await client.send_message(message.channel, "{} - Please mention a user to sponsor membership.".format(message.author.mention))
+            await message.channel.send("{} - Please mention a user to sponsor membership.".format(message.author.mention))
             return
         sponsormember = message.author
         member = message.mentions[0]
@@ -243,16 +248,17 @@ class Command():
         embed.add_field(name="👍/👎", value="Agree/Disagree on {}'s member role.".format(member.name), inline=True)
         embed.add_field(name="👌/👇", value="**[Admins Only]** Instantly grant/decline member status to {}.".format(member.name), inline=True)
 
-        staff_channel = discord.utils.get(message.server.channels, id=config["STAFF_CHANNEL"])
-        msg = await client.send_message(staff_channel, embed=embed)
-        await client.send_message(message.channel, "Your request has been sent! Please wait for the staff's decision on your member sponsorship request!")
+        guild = message.guild or client.get_guild(config['GUILD_ID'])
+        staff_channel = guild.get_channel(config["STAFF_CHANNEL"])
+        msg = await staff_channel.send(embed=embed)
+        await message.channel.send("Your request has been sent! Please wait for the staff's decision on your member sponsorship request!")
 
-        await client.add_reaction(msg, "👍")
-        await client.add_reaction(msg, "👎")
-        await client.add_reaction(msg, "👌")
-        await client.add_reaction(msg, "👇")
+        await msg.add_reaction("👍")
+        await msg.add_reaction("👎")
+        await msg.add_reaction("👌")
+        await msg.add_reaction("👇")
 
-        await client.pin_message(msg)
+        await msg.pin()
 
     async def stream(message):
         msg = message.content
@@ -266,7 +272,7 @@ class Command():
             global streaming_instance
             await streaming_instance.initiate(game, streamer)
         else:
-            await client.send_message(message.channel, "Sorry {}, you do not have the streamer role.".format(message.author.mention))
+            await message.channel.send("Sorry {}, you do not have the streamer role.".format(message.author.mention))
 
     async def stlist(message):
         if await CheckUser.is_streamer(message.author):
@@ -275,15 +281,15 @@ class Command():
             embed = discord.Embed(title="Stream Code List", colour=discord.Colour(0x807bbe), description="List of stream codes. Type `!stream <code>` to start streaming!")
             for code, showname in codes.items():
                 embed.add_field(name=code, value=showname)
-            await client.send_message(message.channel, message.author.mention, embed=embed)
+            await message.channel.send(message.author.mention, embed=embed)
         else:
-            await client.send_message(message.channel, "Sorry {}, you do not have the streamer role.".format(message.author.mention))
+            await message.channel.send("Sorry {}, you do not have the streamer role.".format(message.author.mention))
 
     async def news(message):
         if await CheckUser.is_streamer(message.author) or await CheckUser.is_admin(message.author):
             url = "https://bronytv.net/api/raribox?api_key={}".format(config["BRONYTV_API_KEY"])
             if len(message.content.split()) < 2:
-                await client.send_message(message.channel, "Hey {}, Please change the rariboard using the following command format:\n`!news <image-url> <message>` (At least one parameter is required); Message parameter of `none` to clear rariboard.".format(message.author.mention))
+                await message.channel.send("Hey {}, Please change the rariboard using the following command format:\n`!news <image-url> <message>` (At least one parameter is required); Message parameter of `none` to clear rariboard.".format(message.author.mention))
                 return
             content = message.content.split(None, 1)[1] # truncate the command
             payload = {}
@@ -305,71 +311,70 @@ class Command():
             headers = {'Content-Type': 'application/json'}
             async with aiohttp.ClientSession() as session:
                 async with session.post(url, data=json.dumps(payload), headers=headers):
-                    await client.send_message(message.channel, "{}, Rariboard updated with the following values changed:".format(message.author.mention), embed=embed)
+                    await message.channel.send("{}, Rariboard updated with the following values changed:".format(message.author.mention), embed=embed)
         else:
-            await client.send_message(message.channel, "Sorry {}, you do not have the streamer or admin role.".format(message.author.mention))
-            
+            await message.channel.send("Sorry {}, you do not have the streamer or admin role.".format(message.author.mention))
+
     async def pick(message):
         if message.content.find(' or ') != -1:
             options=message.content[6:].split(' or ')
             choice=random.randint(0, len(options) - 1)
-            await client.send_message(message.channel, '{} Ummm..... I\'ll go with **'.format(message.author.mention) + options[choice] + '**.')
+            await message.channel.send('{} Ummm..... I\'ll go with **'.format(message.author.mention) + options[choice] + '**.')
         else:
-            await client.send_message(message.channel, "or...?")
+            await message.channel.send("or...?")
 
     async def pony(message):
-        await client.send_message(message.channel, "Pony!")
+        await message.channel.send("Pony!")
 
     async def changeling(message):
-        ama = await client.get_user_info("81238021453647872")
-        await client.send_message(message.channel, "{} is best admin =P".format(ama.mention))
+        ama = client.get_user(81238021453647872)
+        await message.channel.send("{} is best admin =P".format(ama.mention))
 
     async def tech(message):
-        ama = await client.get_user_info("81238021453647872")
-        await client.send_message(message.channel, "{} is your tech god. FEAR HIM.".format(ama.mention))
+        mirality = client.get_user(87002219613810688)
+        await message.channel.send("{} is your tech god. FEAR HIM.".format(mirality.mention))
 
     async def bumble(message):
-        await client.send_message(message.channel, "Current Time is Pants-O-Clock")
+        await message.channel.send("Current Time is Pants-O-Clock")
 
     async def colgate(message):
-        await client.send_message(message.channel, "{} is a little dirty. Brushie Brushie Brushie! (with Colgate brand toothpaste)".format(message.author.mention))
+        await message.channel.send("{} is a little dirty. Brushie Brushie Brushie! (with Colgate brand toothpaste)".format(message.author.mention))
 
     async def fluttershy(message):
-        await client.send_message(message.channel, "Bouncing baby bunies burning brightly")
+        await message.channel.send("Bouncing baby bunnies burning brightly")
 
     async def rainbowdash(message):
-        await client.send_message(message.channel, "No! Don\'t panic! There\'s cookies and punch by the door!")
+        await message.channel.send("No! Don\'t panic! There\'s cookies and punch by the door!")
 
     async def brushie(message):
-        await client.send_message(message.channel, "{} is a little dirty. Brushie Brushie Brushie!".format(message.author.mention))
+        await message.channel.send("{} is a little dirty. Brushie Brushie Brushie!".format(message.author.mention))
 
     async def roulette(message):
-        await client.send_message(message.author, "Looks like someone tried playing Russian Roulette with a shotgun...")
-        await client.send_message(message.channel, "{} is playing Russian Roulette with a shotgun...".format(message.author.mention))
-        await client.kick(message.author)
+        await message.author.send("Looks like someone tried playing Russian Roulette with a shotgun...")
+        await message.channel.send("{} is playing Russian Roulette with a shotgun...".format(message.author.mention))
+        await message.author.kick()
 
     async def konami(message):
-        await client.send_message(message.channel, "Up Up Down Down Left Right Left Right B A")
+        await message.channel.send("Up Up Down Down Left Right Left Right B A")
 
     async def burn(message):
-        await client.send_message(message.channel, "Here, you might need this. http://www.magidglove.com/Water-Jel-Burn-Jel-Burn-Treatment-Gel-049050pp.aspx")
+        await message.channel.send("Here, you might need this. http://www.magidglove.com/Water-Jel-Burn-Jel-Burn-Treatment-Gel-049050pp.aspx")
 
     async def violate(message):
-        if await CheckUser.is_admin(message.author):
-            rndint=random.randint(1,4)
-            vmsg = ""
-            if rndint==1:
-                vmsg='Your mane looks like a mess. Want me to brushie you all night long?'
-            if rndint==2:
-                vmsg='Hey cutie, can I mark you all night?'
-            if rndint==3:
-                vmsg='Oh, I\'m sorry. I thought that was a braille Cutie Mark.'
-            if rndint==4:
-                vmsg='My name\'th Twi\'tht. Do you want to th\'ee th\'omething th\'well?'
-            await client.send_message(message.channel, "*slides up besides {} and says **{}***".format(message.author.mention, vmsg))
+        target = message.author
+        if await CheckUser.is_admin(target) and len(message.mentions) > 0:
+            target = message.mentions[0]
+
+        violations = [
+            'Your mane looks like a mess. Want me to brushie you all night long?',
+            'Hey cutie, can I mark you all night?',
+            'Oh, I\'m sorry. I thought that was a braille Cutie Mark.',
+            'My name\'th Twi\'tht. Do you want to th\'ee th\'omething th\'well?']
+        vmsg = random.choice(violations)
+        await message.channel.send("*slides up beside {} and says **{}***".format(target.mention, vmsg))
 
     async def ping(message):
-        await client.send_message(message.channel, "{} Pong! :D".format(message.author.mention))
+        await message.channel.send("{} Pong! :D".format(message.author.mention))
 
 class Tumblr(object):
     @classmethod
@@ -416,7 +421,7 @@ class Tumblr(object):
                 self.ignore_initial = False
                 return
 
-            tumblr_channel = client.get_channel(str(config["TUMBLR_CHANNEL"]))
+            tumblr_channel = client.get_channel(config["TUMBLR_CHANNEL"])
 
             embed = discord.Embed(title=self.title, colour=discord.Colour(0x9412b5), url=self.post_url, description=self.content, timestamp=datetime.datetime.utcfromtimestamp(self.timestamp))
 
@@ -432,7 +437,7 @@ class Tumblr(object):
                 "Oh goodie, what's shaken?!",
                 "Today, I bring you this..."
             ]
-            await client.send_message(tumblr_channel, random.choice(headlines), embed=embed)
+            await tumblr_channel.send(random.choice(headlines), embed=embed)
 
     def get_content(self, post):
         if post['type'] == "text":
@@ -484,27 +489,27 @@ class MemberPromotion():
     async def is_valid_message(message): # check if the message is a promotion request posted by the bot
         if message.author.id == client.user.id:
             for embed in message.embeds:
-                if embed['type'] == "rich" and (embed['title'] == "__Member Role Request__" or embed['title'] == "__Member Role Sponsorship Request__"):
+                if embed.type == "rich" and (embed.title == "__Member Role Request__" or embed.title == "__Member Role Sponsorship Request__"):
                     return True
         return False
 
     async def run_admin_promotion(reaction, user): # promote user depending on the reaction of admin
         if reaction.emoji == "👌" or reaction.emoji == "👇":
-            member_id = reaction.message.embeds[0]["footer"]["text"][9:]
-            member = discord.utils.get(reaction.message.server.members, id=member_id)
-            role = discord.utils.get(reaction.message.server.roles, id=config["MEMBER_ROLE"])
+            member_id = int(reaction.message.embeds[0].footer.text[9:])
+            member = reaction.message.guild.get_member(member_id)
+            role = reaction.message.guild.get_role(config["MEMBER_ROLE"])
 
             if reaction.emoji == "👌":
                 #promote to member
-                await client.add_roles(member, role)
-                await client.send_message(reaction.message.channel, "Member role has been approved for {}#{} by {}.".format(member.name, member.discriminator, user.name))
-                await client.send_message(member, "*Pssst* I've heard from the staffs over at BronyTV that you've been given the member role!")
+                await member.add_roles(role)
+                await reaction.message.channel.send("Member role has been approved for {}#{} by {}.".format(member.name, member.discriminator, user.name))
+                await member.send("*Pssst* I've heard from the staff over at BronyTV that you've been given the member role!")
 
             if reaction.emoji == "👇":
                 #demote member
-                await client.remove_roles(member, role)
-                await client.send_message(reaction.message.channel, "Member role has been declined for {}#{} by {}".format(member.name, member.discriminator, user.name))
-            await client.unpin_message(reaction.message)
+                await member.remove_roles(role)
+                await reaction.message.channel.send("Member role has been declined for {}#{} by {}".format(member.name, member.discriminator, user.name))
+            await reaction.message.unpin()
 
     async def run_threshold_promotion(reaction): # promotes user if message meets criterias
         reactions = reaction.message.reactions
@@ -513,15 +518,15 @@ class MemberPromotion():
             if react.emoji in reactions_parsed:
                 reactions_parsed[react.emoji] = react.count - 1
         if (reactions_parsed["👌"] == 0 and reactions_parsed["👇"] == 0 and reactions_parsed["👎"] == 0 and reactions_parsed["👍"] >= 4): # if only yes (4) and nothin else
-            member_id = reaction.message.embeds[0]["footer"]["text"][9:]
-            member = discord.utils.get(reaction.message.server.members, id=member_id)
-            role = discord.utils.get(reaction.message.server.roles, id=config["MEMBER_ROLE"])
+            member_id = int(reaction.message.embeds[0].footer.text[9:])
+            member = reaction.message.guild.get_member(member_id)
+            role = reaction.message.guild.get_role(config["MEMBER_ROLE"])
             if not await CheckUser.is_member(member):
                 #promote to member
-                await client.add_roles(member, role)
-                await client.send_message(reaction.message.channel, "Member role has been approved for {}#{} automatically from a unison vote of 4 or more 👍s.".format(member.name, member.discriminator))
-                await client.send_message(member, "*Pssst* I've heard from the staffs over at BronyTV that you've been given the member role!")
-                await client.unpin_message(reaction.message)
+                await member.add_roles(role)
+                await reaction.message.channel.send("Member role has been approved for {}#{} automatically from a unison vote of 4 or more 👍s.".format(member.name, member.discriminator))
+                await member.send("*Pssst* I've heard from the staff over at BronyTV that you've been given the member role!")
+                await reaction.message.unpin()
 
 @client.event
 async def on_message(message):
@@ -532,13 +537,14 @@ async def on_message(message):
             msg_cmd = msg_cmd[1:] # remove the command prefix
             cmd = getattr(Command, msg_cmd, None) #check if cmd exist, if not its none
             if cmd: # if cmd is not none...
-                await client.send_typing(message.channel) #this looks nice
-                await getattr(Command, msg_cmd)(message) #actually run cmd, passing in msg obj
-        elif msg_cmd == "<@{}>".format(client.user.id): #make sure it is a mention (eliza handler)
-            await client.send_typing(message.channel)
-            user_query = message.content.split(" ", 1)[1]
-            response = eliza_chatbot.respond(user_query)
-            await client.send_message(message.channel, "{}, {}".format(message.author.mention, response))
+                async with message.channel.typing(): #this looks nice
+                    await getattr(Command, msg_cmd)(message) #actually run cmd, passing in msg obj
+        elif (msg_cmd == "<@{}>".format(client.user.id) or
+              msg_cmd == "<@!{}>".format(client.user.id)): #make sure it is a mention (eliza handler)
+            async with message.channel.typing():
+                user_query = message.content.split(" ", 1)[1]
+                response = eliza_chatbot.respond(user_query)
+                await message.channel.send("{}, {}".format(message.author.mention, response))
 
 @client.event
 async def on_reaction_add(reaction, user):
@@ -550,7 +556,7 @@ async def on_reaction_add(reaction, user):
 async def tumblr_background_loop():
     await client.wait_until_ready()
     tumblr = await Tumblr.create()
-    while not client.is_closed:
+    while not client.is_closed():
         await tumblr.new_post_task()
         await asyncio.sleep(120)
 
