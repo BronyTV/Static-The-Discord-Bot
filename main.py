@@ -19,7 +19,10 @@ from nltk.chat.eliza import eliza_chatbot
 
 dir_path = os.path.dirname(os.path.realpath(__file__)) # File folder path to this script
 
-client = discord.Client()
+intents = discord.Intents.default()
+intents.members = True
+
+client = discord.Client(intents=intents)
 logging.basicConfig(filename='staticbot.log',level=logging.INFO,format='%(asctime)s %(message)s', datefmt='%m/%d/%Y %I:%M:%S %p')
 logger = logging.getLogger('StaticBot')
 
@@ -45,7 +48,8 @@ async def on_ready():
 class CheckUser():
     def get_roles(user):
         roles = []
-        member = client.get_guild(config['GUILD_ID']).get_member(user.id)
+        guild = client.get_guild(config['GUILD_ID'])
+        member = guild.get_member(user.id)
         for role in member.roles:
             roles.append(role.id)
         return roles
@@ -531,20 +535,23 @@ class MemberPromotion():
 @client.event
 async def on_message(message):
     # Command Handler - tm of endendragon
-    if len(message.content.split()) > 0: #making sure there is actually stuff in the message
-        msg_cmd = message.content.split()[0].lower() # get first word im message
-        if msg_cmd[0] in config["COMMAND_PREFIX"]: # test for cmd prefix
-            msg_cmd = msg_cmd[1:] # remove the command prefix
-            cmd = getattr(Command, msg_cmd, None) #check if cmd exist, if not its none
-            if cmd: # if cmd is not none...
-                async with message.channel.typing(): #this looks nice
-                    await getattr(Command, msg_cmd)(message) #actually run cmd, passing in msg obj
-        elif (msg_cmd == "<@{}>".format(client.user.id) or
-              msg_cmd == "<@!{}>".format(client.user.id)): #make sure it is a mention (eliza handler)
-            async with message.channel.typing():
-                user_query = message.content.split(" ", 1)[1]
-                response = eliza_chatbot.respond(user_query)
-                await message.channel.send("{}, {}".format(message.author.mention, response))
+    try:
+        if len(message.content.split()) > 0: #making sure there is actually stuff in the message
+            msg_cmd = message.content.split()[0].lower() # get first word im message
+            if msg_cmd[0] in config["COMMAND_PREFIX"]: # test for cmd prefix
+                msg_cmd = msg_cmd[1:] # remove the command prefix
+                cmd = getattr(Command, msg_cmd, None) #check if cmd exist, if not its none
+                if cmd: # if cmd is not none...
+                    async with message.channel.typing(): #this looks nice
+                        await getattr(Command, msg_cmd)(message) #actually run cmd, passing in msg obj
+            elif (msg_cmd == "<@{}>".format(client.user.id) or
+                  msg_cmd == "<@!{}>".format(client.user.id)): #make sure it is a mention (eliza handler)
+                async with message.channel.typing():
+                    user_query = message.content.split(" ", 1)[1]
+                    response = eliza_chatbot.respond(user_query)
+                    await message.channel.send("{}, {}".format(message.author.mention, response))
+    except Exception as e:
+        logger.error("Error during command %s", message.content, exc_info=e)
 
 @client.event
 async def on_reaction_add(reaction, user):
